@@ -1,6 +1,31 @@
+# Enterprise Alertmanager Inhibition Rule Catalog
+# Purpose: Suppress noisy cascades and downstream alerts during primary component failures
+
 inhibit_rules:
+  # 1. Tier 1 Severity Suppression
   - source_match:
       severity: 'critical'
     target_match:
       severity: 'warning'
     equal: ['alertname', 'cluster', 'service']
+
+  # 2. Infrastructure Infrastructure Failure Cascade Suppression
+  - source_match:
+      alertname: 'NodeNotReady'
+    target_match_re:
+      alertname: '.*(KubeletPlegDurationHigh|ContainerHighMemoryUsage|PodNetworkErrors).*'
+    equal: ['node', 'cluster']
+
+  # 3. Network / Availability Zone Partition Suppression
+  - source_match:
+      alertname: 'AvailabilityZoneNetworkIsolated'
+    target_match:
+      tier: 'application'
+    equal: ['availability_zone', 'cluster']
+
+  # 4. Storage Engine Volume Outage Suppression
+  - source_match:
+      alertname: 'PersistentVolumeClaimExhausted'
+    target_match:
+      alertname: 'ApplicationWriteTimeout'
+    equal: ['pvc_name', 'namespace']

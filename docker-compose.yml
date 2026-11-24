@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager-routing-core
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    environment:
+      - ALERTMANAGER_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00/B00/X00
+      - PAGERDUTY_ROUTING_KEY_CRITICAL=pd-crit-fake-key
+      - PAGERDUTY_ROUTING_KEY_DBA=pd-dba-fake-key
+      - PAGERDUTY_ROUTING_KEY_SOC=pd-soc-fake-key
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./templates:/etc/alertmanager/templates:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--cluster.listen-address='
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  alertmanager-data:
+    driver: local
